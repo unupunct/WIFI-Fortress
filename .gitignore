@@ -12,3 +12,6 @@ dist/
 # Windows build artefacts
 packaging/windows/output/
 packaging/windows/build/
+packaging/debian/stage_tmp/
+packaging/debian/_pkg/
+packaging/_filelist.txt
