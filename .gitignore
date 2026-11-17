@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+packaging/debian/stage/
+packaging/debian/stage_test/
+packaging/debian/*.deb
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,7 @@
+wifi-fortress (1.0.0) stable; urgency=medium
+
+  * Initial release: adapter management, Wi-Fi discovery, authorised saved
+    credential recovery, defensive security audit, password laboratory,
+    dictionary manager, connection diagnostics and PDF/HTML/JSON reporting.
+
+ -- WiFi Fortress Project <unupunct@users.noreply.github.com>  Mon, 17 Nov 2026 00:00:00 +0200

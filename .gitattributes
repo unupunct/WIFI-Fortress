@@ -1,0 +1,7 @@
+# The Debian packaging expects POSIX line endings even when the repository
+# is checked out on Windows.
+*.sh            text eol=lf
+wifi-fortress-launcher text eol=lf
+*.desktop       text eol=lf
+*.py            text eol=lf
+wififortress/resources/dictionaries/*.txt text eol=lf

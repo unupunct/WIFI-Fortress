@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wifi-fortress"
+dynamic = ["version"]
+description = "Unified Parrot OS wireless security, diagnostics and Wi-Fi recovery suite"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "WiFi Fortress Project" }]
+keywords = ["wifi", "security", "audit", "parrot", "wireless"]
+classifiers = [
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = ["PySide6>=6.6", "pyqtgraph>=0.13", "reportlab>=4.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+wifi-fortress = "wififortress.app.main:main"
+
+[project.gui-scripts]
+wifi-fortress-gui = "wififortress.app.main:main"
+
+[tool.setuptools]
+packages = [
+    "wififortress",
+    "wififortress.app",
+    "wififortress.core",
+    "wififortress.models",
+    "wififortress.services",
+    "wififortress.ui",
+    "wififortress.ui.dialogs",
+    "wififortress.widgets",
+    "wififortress.utils",
+    "wififortress.resources",
+    "wififortress.resources.dictionaries",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "wififortress.__version__" }
+
+[tool.setuptools.package-data]
+"wififortress.resources.dictionaries" = ["*.txt", "*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

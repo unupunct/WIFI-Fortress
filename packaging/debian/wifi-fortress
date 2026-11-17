@@ -1,0 +1,15 @@
+#!/bin/sh
+# Launcher installed to /usr/bin/wifi-fortress by the Debian package.
+# The GUI must run as the invoking user; elevation is per operation.
+set -eu
+
+APP_DIR=/opt/wifi-fortress
+PYTHON=${WIFI_FORTRESS_PYTHON:-python3}
+
+if [ ! -d "$APP_DIR/wififortress" ]; then
+    echo "wifi-fortress: application files missing from $APP_DIR" >&2
+    exit 1
+fi
+
+export PYTHONPATH="$APP_DIR${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PYTHON" -m wififortress.app.main "$@"
