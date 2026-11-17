@@ -1,3 +1,16 @@
+wifi-fortress (1.1.0) unstable; urgency=medium
+
+  * Passphrase Hardening page: models offline attack resistance for the
+    passphrase you set on your own router, per hardware tier, with weakest-link
+    analysis, WPA3-SAE comparison and a concrete fix list. The verdict feeds the
+    Security Audit.
+  * Dictionary Manager: catalogue of 49 verified public word lists, 24 of them
+    downloadable in one click, with Download / Download + import, category and
+    Wi-Fi filters, and per-file licence, origin and SHA-256 preserved.
+  * Database: additive migration so upgrades keep existing dictionaries.
+
+ -- WiFi Fortress <wififortress@localhost>  Mon, 05 Jan 2026 00:00:00 +0200
+
 wifi-fortress (1.0.0) stable; urgency=medium
 
   * Initial release: adapter management, Wi-Fi discovery, authorised saved

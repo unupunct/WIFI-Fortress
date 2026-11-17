@@ -105,9 +105,19 @@ CREATE TABLE IF NOT EXISTS dictionaries (
     sha256 TEXT,
     enabled INTEGER DEFAULT 1,
     position INTEGER DEFAULT 0,
-    imported_at TEXT
+    imported_at TEXT,
+    provenance TEXT,
+    description TEXT,
+    purpose TEXT
 );
 """
+
+
+_DICTIONARY_MIGRATIONS = {
+    "provenance": "TEXT",
+    "description": "TEXT",
+    "purpose": "TEXT",
+}
 
 
 def utc_now_iso() -> str:
@@ -160,6 +170,14 @@ class Database:
             cur.execute(
                 "INSERT OR IGNORE INTO schema_meta(key, value) VALUES ('version', '1')"
             )
+            # Additive migrations: an existing database keeps its rows and gains
+            # the newer columns, so an upgrade never loses a user's dictionaries.
+            existing = {
+                row["name"] for row in cur.execute("PRAGMA table_info(dictionaries)")
+            }
+            for column, kind in _DICTIONARY_MIGRATIONS.items():
+                if column not in existing:
+                    cur.execute(f"ALTER TABLE dictionaries ADD COLUMN {column} {kind}")
 
     # -- scans ---------------------------------------------------------
     def start_scan(self, interface: str, source: str) -> int:
@@ -325,13 +343,15 @@ class Database:
         with self.cursor() as cur:
             cur.execute(
                 "INSERT INTO dictionaries(dict_id, name, path, source, license,"
-                " entry_count, size_bytes, sha256, enabled, position, imported_at)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                " entry_count, size_bytes, sha256, enabled, position, imported_at,"
+                " provenance, description, purpose)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                 " ON CONFLICT(dict_id) DO UPDATE SET name=excluded.name,"
                 " path=excluded.path, source=excluded.source, license=excluded.license,"
                 " entry_count=excluded.entry_count, size_bytes=excluded.size_bytes,"
                 " sha256=excluded.sha256, enabled=excluded.enabled,"
-                " position=excluded.position",
+                " position=excluded.position, provenance=excluded.provenance,"
+                " description=excluded.description, purpose=excluded.purpose",
                 (
                     record["dict_id"],
                     record["name"],
@@ -344,6 +364,9 @@ class Database:
                     1 if record.get("enabled", True) else 0,
                     record.get("position", 0),
                     record.get("imported_at") or utc_now_iso(),
+                    record.get("provenance", ""),
+                    record.get("description", ""),
+                    record.get("purpose", ""),
                 ),
             )
 

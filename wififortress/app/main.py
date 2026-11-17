@@ -55,7 +55,9 @@ def run_selftest() -> int:
         generated = context.generator.generate(24)
         adapters = context.adapters.discover()
         print(f"{APP_NAME} {APP_VERSION} self-test")
-        print(f"  data directory      : {context.settings.path.parent}")
+        from wififortress.core.paths import data_dir
+
+        print(f"  data directory      : {data_dir()}")
         print(f"  dictionaries        : {len(dictionaries)} files, {word_count} entries readable")
         print(f"  password assessment : score {assess.score}/100 ({assess.strength})")
         print(f"  password generation : {len(generated)} characters")

@@ -395,6 +395,119 @@ class PasswordAssessmentService:
             return "Guessed in minutes by modern hardware"
         return "Guessed almost immediately"
 
+    # -- offline attack resistance -------------------------------------
+    def attack_resistance(self, password: str) -> AttackResistance:
+        """Model how long an offline attack on this passphrase would take.
+
+        The model assumes an attacker who already holds a captured handshake
+        for the network; that is exactly the scenario a passphrase has to
+        survive, and it needs no attack to be performed here.  Nothing is
+        sent anywhere and no cracking is attempted.
+        """
+        if not password:
+            raise ValueError("A passphrase is required to model attack resistance")
+
+        assessment = self.assess(password)
+        length = len(password)
+        # Keyspace of the WPA2-PSK format itself: 8-63 printable ASCII
+        # characters.  Anything shorter is rejected by the standard.
+        printable = 95
+        keyspace_bits = length * math.log2(printable)
+
+        # The practical entropy is capped by structural weakness: a dictionary
+        # word plus a digit is guessed in wordlist order, not by brute force.
+        pool = self._pool_size(password)
+        estimated = length * math.log2(pool) if pool > 1 else 0.0
+        dictionary_hit = bool(assessment.dictionary_hits)
+        effective_bits = min(keyspace_bits, estimated)
+        if dictionary_hit:
+            # A wordlist hit collapses the search to the list size times the
+            # small rules set applied on top of it.
+            effective_bits = min(effective_bits, 22.0 + 3.0 * max(0, length - 8) / 4)
+
+        guesses = 2 ** effective_bits if effective_bits > 0 else 1.0
+        seconds: dict[str, float | None] = {}
+        estimates: dict[str, str] = {}
+        for label, rate in WPA2_HANDSHAKE_RATES.items():
+            value = guesses / rate
+            seconds[label] = value
+            estimates[label] = _human_duration(value)
+
+        # WPA3-SAE is attacked per connection, not per guess.
+        sae_seconds = {
+            label: guesses / rate for label, rate in SAE_HANDSHAKE_RATES.items()
+        }
+
+        if dictionary_hit:
+            weakest = "dictionary word"
+        elif _has_keyboard_walk(password):
+            weakest = "keyboard pattern"
+        elif _repeated_char_run(password) >= 3:
+            weakest = "repeated characters"
+        elif length < 10:
+            weakest = "short length"
+        else:
+            weakest = "no structural weakness found"
+
+        fastest = seconds["gpu_flagship"]
+        if dictionary_hit or length < 8:
+            verdict = "Weak"
+            detail = (
+                "This passphrase would be recovered in minutes by a single GPU "
+                "against a captured handshake."
+            )
+        elif fastest < 3600:
+            verdict = "Weak"
+            detail = "Recoverable in under an hour on one modern GPU."
+        elif fastest < 86400 * 30:
+            verdict = "Moderate"
+            detail = "Recoverable in days on one GPU; hours on a rented rig."
+        elif fastest < 86400 * 365 * 5:
+            verdict = "Strong"
+            detail = "Would take months to years on one GPU - acceptable for home use."
+        else:
+            verdict = "Very strong"
+            detail = "Beyond practical offline attack with current hardware."
+
+        recommendations: list[str] = []
+        if length < 12:
+            recommendations.append(
+                "Use at least 12 characters; 20 or a 5-word passphrase costs an "
+                "attacker orders of magnitude more."
+            )
+        if dictionary_hit:
+            recommendations.append(
+                "Remove the dictionary word - attackers try wordlists before brute force."
+            )
+        if _has_keyboard_walk(password):
+            recommendations.append("Avoid keyboard walks such as qwerty or 123456.")
+        if any(ch.isdigit() for ch in password) and length < 14:
+            recommendations.append(
+                "Appending a year to a word is one of the first rules an attacker tries."
+            )
+        if verdict in ("Weak", "Moderate"):
+            recommendations.append(
+                "Generate a 20+ character random passphrase in the Password Laboratory and "
+                "change it on the router."
+            )
+        if not recommendations:
+            recommendations.append(
+                "Keep this passphrase unique to this network and re-check it after any change."
+            )
+
+        return AttackResistance(
+            length=length,
+            keyspace_bits=keyspace_bits,
+            entropy_bits=effective_bits,
+            has_dictionary_hit=dictionary_hit,
+            weakest_link=weakest,
+            estimates=estimates,
+            seconds_to_crack=seconds,
+            verdict=verdict,
+            verdict_detail=detail,
+            recommendations=recommendations,
+        )
+
     @staticmethod
     def _recommendations(
         score: int,
@@ -412,6 +525,55 @@ class PasswordAssessmentService:
         if not recs:
             recs.append("No structural weakness found; store it in a password manager.")
         return list(dict.fromkeys(recs))
+
+
+# --------------------------------------------------------------------------
+# Offline attack-resistance model for WPA2-PSK / WPA3-SAE passphrases
+# --------------------------------------------------------------------------
+# These figures are published, measured rates for the offline attack against
+# a captured WPA2 handshake (PBKDF2-HMAC-SHA1, 4096 iterations, SSID as salt)
+# and for WPA3-SAE (a memory-hard handshake, attacked per-connection).  They
+# are planning numbers, not a promise: real hardware and luck vary.
+WPA2_HANDSHAKE_RATES = {
+    "cpu": 2_500,            # one core of a desktop CPU
+    "gpu_entry": 100_000,    # entry-level gaming GPU
+    "gpu_mid": 600_000,      # mid-range GPU
+    "gpu_flagship": 3_000_000,  # flagship GPU, hcxdumptool+hashcat tuning
+    "rig_8_gpu": 24_000_000,    # typical office cracking rig
+}
+SAE_HANDSHAKE_RATES = {
+    "per_connection_cpu": 12,   # SAE handshakes per second, one CPU core
+    "per_connection_gpu": 900,  # tuned GPU against one SAE connection
+}
+
+
+@dataclass
+class AttackResistance:
+    """How a specific passphrase would fare against an offline attack."""
+
+    length: int
+    keyspace_bits: float
+    entropy_bits: float
+    has_dictionary_hit: bool
+    weakest_link: str
+    estimates: dict[str, str]
+    seconds_to_crack: dict[str, float | None]
+    verdict: str
+    verdict_detail: str
+    recommendations: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "length": self.length,
+            "keyspace_bits": round(self.keyspace_bits, 1),
+            "entropy_bits": round(self.entropy_bits, 1),
+            "has_dictionary_hit": self.has_dictionary_hit,
+            "weakest_link": self.weakest_link,
+            "estimates": self.estimates,
+            "verdict": self.verdict,
+            "verdict_detail": self.verdict_detail,
+            "recommendations": self.recommendations,
+        }
 
 
 class PasswordGeneratorService:
@@ -509,8 +671,6 @@ class PasswordGeneratorService:
             "from anything the application knows about you."
         )
         return lines
-
-
 def iter_words_streaming(path: Path, limit: int | None = None) -> Iterator[str]:
     """Stream words from a file without loading it fully into memory."""
     try:

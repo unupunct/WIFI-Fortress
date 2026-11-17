@@ -8,3 +8,7 @@ packaging/debian/*.deb
 build/
 dist/
 *.egg-info/
+
+# Windows build artefacts
+packaging/windows/output/
+packaging/windows/build/

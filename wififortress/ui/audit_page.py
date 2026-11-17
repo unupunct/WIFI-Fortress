@@ -207,6 +207,16 @@ class AuditPage(QWidget):
         assessment = None
         if password:
             assessment = self.context.password.assess(password).to_dict()
+            # Include how long an offline attack on this passphrase would need,
+            # so the audit states the real risk rather than only structural score.
+            try:
+                resistance = self.context.password.attack_resistance(password)
+                assessment["attack_resistance"] = resistance.to_dict()
+                assessment["crack_time_estimate"] = resistance.estimates.get(
+                    "gpu_flagship", assessment.get("crack_time_estimate", "unknown")
+                )
+            except ValueError:
+                pass
         context = AuditContext(
             network=network,
             adapter=self.context.active_adapter,

@@ -24,6 +24,7 @@ from wififortress.ui.audit_page import AuditPage
 from wififortress.ui.dashboard_page import DashboardPage
 from wififortress.ui.diagnostics_page import DiagnosticsPage
 from wififortress.ui.dictionaries_page import DictionaryPage
+from wififortress.ui.hardening_page import HardeningPage
 from wififortress.ui.environment_page import EnvironmentPage
 from wififortress.ui.networks_page import NetworksPage
 from wififortress.ui.password_page import PasswordPage
@@ -40,6 +41,7 @@ NAV_ITEMS = [
     ("audit", "Security Audit", "shield"),
     ("tools", "Wireless Tools", "tools"),
     ("adapters", "Adapter Manager", "adapter"),
+    ("hardening", "Passphrase Hardening", "shield"),
     ("password", "Password Laboratory", "lock"),
     ("dictionaries", "Dictionary Manager", "book"),
     ("diagnostics", "Diagnostics", "pulse"),
@@ -82,6 +84,7 @@ class MainWindow(QMainWindow):
         self.tools = ToolsPageLazy(context)
         self.adapters = AdapterPage(context)
         self.password = PasswordPage(context)
+        self.hardening = HardeningPage(context)
         self.dictionaries = DictionaryPage(context)
         self.diagnostics = DiagnosticsPage(context)
         self.reports = ReportsPage(context)
@@ -94,6 +97,7 @@ class MainWindow(QMainWindow):
             ("audit", self.audit),
             ("tools", self.tools),
             ("adapters", self.adapters),
+            ("hardening", self.hardening),
             ("password", self.password),
             ("dictionaries", self.dictionaries),
             ("diagnostics", self.diagnostics),

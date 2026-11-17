@@ -19,6 +19,7 @@ PDF/HTML/JSON reporting — in one application instead of a dozen terminal tools
 | **Security Audit** | Documented 0–100 score with per-finding evidence, explanation, impact and recommendation; before/after comparison |
 | **Wireless Tools** | Detects installed Parrot wireless tools and their versions — it does not run cracking, handshake-capture or deauthentication workflows |
 | **Adapter Manager** | Interface state, driver, chipset, PHY capabilities, bands, monitor-mode support, rfkill and link control |
+| **Passphrase Hardening** | Models how long an offline attack on a captured handshake would need for the passphrase you actually set — per-hardware estimates, weakest-link analysis, WPA3 comparison and a concrete fix list. Pure arithmetic: nothing is attacked |
 | **Password Laboratory** | Local-only password strength assessment and CSPRNG generation, including passphrases from the bundled word lists |
 | **Dictionary Manager** | Ten bundled word lists with verified provenance, plus import/verify/enable/reorder of your own |
 | **Diagnostics** | Interface, addressing, gateway, DNS, reachability, latency and packet loss, each with a suggested fix |
@@ -123,6 +124,52 @@ sudo apt install dpkg-dev fakeroot
 ```
 
 ---
+
+## Public word lists — 49 verified sources, downloaded on demand
+
+The Dictionary Manager carries a catalogue of **49 public word lists**, each
+checked to exist when it was added: the raw URL answers and the file is plain
+text. Filter by category or by *Wi-Fi focused only*, read the licence and
+description, then **Download**, **Download + import**, or open the project page
+in your browser.
+
+Downloadable in one click (24 single files):
+
+- **Wi-Fi specific** — SecLists *probable WPA top 4800*, Probable-Wordlists
+  *WPA 204k / 4800 / 447*, kkrypt0nn *probable_wpa*, the wifite and fern-wifi
+  lists from `00xZEROx00/kali-wordlists`
+- **Common passwords** — SecLists *10k / 1M / 500 worst / NCSC 100k / 2025 top
+  200*, the devoxel gist (10,000 entries), kkrypt0nn *most used*, All-Wordlists
+  *john / weaksauce*, duyet *1M*, FuzzDB
+- **Router defaults** — SecLists default-credentials lists
+
+The other 25 are reference links to project pages and archives (rockyou,
+weakpass, CrackStation, haveibeenpwned, Hob0Rules, full repositories): openable
+in one click, but not streamed here.
+
+Every download is size-capped, streamed to disk, unpacked if gzipped, rejected
+if it is binary, and recorded with its source URL, upstream licence and SHA-256.
+Nothing is fetched until you ask for it, and no list is ever bundled.
+
+## Passphrase Hardening — the defensive answer to "is my password crackable?"
+
+You do not need to capture and crack your own handshake to find out. The
+**Passphrase Hardening** page takes the passphrase you set on your router and
+models the offline attack an adversary would have to run after capturing a
+handshake:
+
+- Time to recover it on a CPU core, an entry-level GPU, a mid-range GPU, a
+  flagship GPU and an 8-GPU rig, using published PBKDF2 rate figures.
+- The **weakest link** — dictionary word, keyboard walk, repeated characters,
+  short length, or none found.
+- The same passphrase against **WPA3-SAE**, where each guess must be replayed
+  live, per connection.
+- A concrete list of changes, and the resulting verdict feeds the Security
+  Audit so the network score reflects real attack resistance.
+
+Nothing is transmitted, logged or stored, and no cracking is performed. The
+model is arithmetic over the same local dictionary matching used by the
+Password Laboratory.
 
 ## What it will not do
 

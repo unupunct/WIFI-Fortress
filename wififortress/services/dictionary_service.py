@@ -182,9 +182,9 @@ class DictionaryManagerService:
                 path=Path(row["path"]),
                 source=row["source"],
                 license=row["license"],
-                description="Imported dictionary",
-                purpose="User-supplied word list for local comparison.",
-                provenance="Imported by the user.",
+                description=row["description"] if row["description"] else "Imported dictionary",
+                purpose=row["purpose"] or "User-supplied word list for local comparison.",
+                provenance=row["provenance"] or "Imported by the user.",
                 enabled=bool(row["enabled"]),
                 position=row["position"],
                 entry_count=row["entry_count"],
@@ -318,6 +318,8 @@ class DictionaryManagerService:
         source: Path,
         name: str | None = None,
         progress: Callable[[int], None] | None = None,
+        licence: str | None = None,
+        provenance: str | None = None,
     ) -> DictionaryInfo:
         if not source.exists() or not source.is_file():
             raise FileNotFoundError(str(source))
@@ -345,10 +347,10 @@ class DictionaryManagerService:
             name=safe_name,
             path=target,
             source="imported",
-            license="User-supplied (not verified)",
+            license=licence or "User-supplied (not verified)",
             description=f"Imported from {source.name}",
             purpose="User-supplied word list for local comparison.",
-            provenance=f"Imported from {source.name}",
+            provenance=provenance or f"Imported from {source.name}",
             enabled=True,
             position=len(self._cache),
             entry_count=count,
@@ -422,6 +424,9 @@ class DictionaryManagerService:
                 "enabled": info.enabled,
                 "position": info.position,
                 "imported_at": info.imported_at,
+                "provenance": info.provenance,
+                "description": info.description,
+                "purpose": info.purpose,
             }
         )
 

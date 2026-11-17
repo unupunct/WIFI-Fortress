@@ -6,7 +6,12 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QFileDialog,
+    QHeaderView,
+    QTableWidget,
+    QTableWidgetItem,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -18,6 +23,11 @@ from PySide6.QtWidgets import (
 )
 
 from wififortress.app.context import AppContext
+from wififortress.services.wordlist_catalog import (
+    CATEGORIES,
+    SOURCES,
+    WordlistCatalogService,
+)
 from wififortress.core.paths import open_in_file_manager
 from wififortress.ui.theme import PALETTE
 from wififortress.ui.workers import WorkerController
@@ -31,7 +41,7 @@ class DictionaryPage(QWidget):
         super().__init__(parent)
         self.context = context
         self._worker = WorkerController(self)
-        self._worker.finished.connect(self._on_verified)
+        self._worker.finished.connect(self._on_task_finished)
         self._worker.failed.connect(self._on_failed)
 
         outer = QVBoxLayout(self)
@@ -90,6 +100,72 @@ class DictionaryPage(QWidget):
         splitter.setSizes([420, 620])
         layout.addWidget(splitter, 1)
 
+        # -- public word lists -----------------------------------------
+        self.catalog = WordlistCatalogService(self.context.dictionaries)
+        catalog_card = Card(
+            "Public word lists",
+            f"{len(SOURCES)} verified public lists. Download one to disk, then import it "
+            "as a dictionary. Nothing is fetched until you press Download.",
+        )
+        filter_row = QHBoxLayout()
+        self.category_filter = QComboBox()
+        self.category_filter.addItem("All categories")
+        for category in CATEGORIES:
+            self.category_filter.addItem(category)
+        self.category_filter.currentTextChanged.connect(lambda _=None: self._refresh_catalog())
+        filter_row.addWidget(self.category_filter)
+        self.only_wifi = QCheckBox("Wi-Fi focused only")
+        self.only_wifi.stateChanged.connect(lambda _=None: self._refresh_catalog())
+        filter_row.addWidget(self.only_wifi)
+        filter_row.addStretch(1)
+        self.catalog_status = QLabel("")
+        self.catalog_status.setObjectName("Muted")
+        filter_row.addWidget(self.catalog_status)
+        catalog_card.add_layout(filter_row)
+
+        self.catalog_list = QTableWidget(0, 4)
+        self.catalog_list.setHorizontalHeaderLabels(["List", "Category", "Licence", "Status"])
+        self.catalog_list.setSelectionBehavior(QTableWidget.SelectRows)
+        self.catalog_list.setSelectionMode(QTableWidget.SingleSelection)
+        self.catalog_list.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.catalog_list.verticalHeader().setVisible(False)
+        self.catalog_list.horizontalHeader().setStretchLastSection(False)
+        header = self.catalog_list.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        for column in (1, 2, 3):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+        self.catalog_list.setMinimumHeight(240)
+        self.catalog_list.itemSelectionChanged.connect(self._on_catalog_selected)
+        self.catalog_list.cellDoubleClicked.connect(
+            lambda row, _col: self._open_catalog_page(row)
+        )
+        catalog_card.add(self.catalog_list, 1)
+
+        self.catalog_note = QLabel(
+            "Select a list to see what it is. Licences belong to the upstream project; "
+            "WiFi Fortress records each file's origin and SHA-256 and never relicenses it."
+        )
+        self.catalog_note.setObjectName("Muted")
+        self.catalog_note.setWordWrap(True)
+        catalog_card.add(self.catalog_note)
+
+        catalog_actions = QHBoxLayout()
+        catalog_actions.addWidget(
+            button("Download selected", "secondary", "", self._download_selected)
+        )
+        catalog_actions.addWidget(
+            button("Download + import", "primary", "", self._download_import_selected)
+        )
+        catalog_actions.addWidget(
+            button("Import downloaded", "secondary", "", self._import_downloaded)
+        )
+        catalog_actions.addWidget(button("Open page", "ghost", "", self._open_selected_page))
+        catalog_actions.addWidget(button("Clear downloads", "ghost", "", self._clear_downloads))
+        catalog_actions.addStretch(1)
+        catalog_card.add_layout(catalog_actions)
+        layout.addWidget(catalog_card)
+        self._catalog_rows: list = []
+
         manage = QHBoxLayout()
         manage.addWidget(button("Import dictionary…", "secondary", "", self._import))
         manage.addWidget(button("Remove imported", "danger", "", self._remove))
@@ -99,6 +175,7 @@ class DictionaryPage(QWidget):
         layout.addLayout(manage)
         layout.addStretch(0)
         self.refresh()
+        self._refresh_catalog()
 
     # -- rendering ------------------------------------------------------
     def refresh(self) -> None:
@@ -171,6 +248,28 @@ class DictionaryPage(QWidget):
         self.banner.set_text("Verifying dictionaries…", "info")
         self._worker.start(self.context.dictionaries.verify_all)
 
+    def _on_task_finished(self, result) -> None:
+        """One entry point for both task kinds the page runs."""
+        from wififortress.services.wordlist_catalog import DownloadResult
+
+        if isinstance(result, DownloadResult):
+            self._on_downloaded(result)
+        else:
+            self._on_verified(result)
+
+    def _on_downloaded(self, result) -> None:
+        self._refresh_catalog()
+        if not result.ok:
+            self.banner.set_text(f"{result.source.name}: {result.message}", "critical")
+            return
+        if result.entry_count:
+            self.refresh()
+            self.context.record_operation(
+                "dictionary", f"Imported {result.source.name}", "ok",
+                f"{result.entry_count} entries",
+            )
+        self.banner.set_text(f"{result.source.name}: {result.message}", "success")
+
     def _on_verified(self, reports) -> None:
         problems = [r for r in reports if not r.ok]
         self.context.load_dictionaries_into_assessment()
@@ -228,6 +327,151 @@ class DictionaryPage(QWidget):
             f"Restored {len(restored)} bundled dictionaries from the installation.", "success"
         )
         self.refresh()
+
+    # -- public word list catalogue -------------------------------------
+    def _refresh_catalog(self) -> None:
+        category = self.category_filter.currentText()
+        wifi_only = self.only_wifi.isChecked()
+        rows = [
+            s for s in SOURCES
+            if (category == "All categories" or s.category == category)
+            and (not wifi_only or s.wifi_focused)
+        ]
+        self._catalog_rows = rows
+        self.catalog_list.setRowCount(len(rows))
+        for index, source in enumerate(rows):
+            downloaded = self.catalog.existing(source)
+            if downloaded is not None:
+                status = f"Downloaded ({downloaded.stat().st_size / 1024:.0f} KB)"
+            elif source.is_file:
+                status = "Available"
+            else:
+                status = "Project page"
+            values = [source.name, source.category, source.licence, status]
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                item.setToolTip(source.note or source.name)
+                self.catalog_list.setItem(index, column, item)
+        if not rows:
+            self.catalog_note.setText("No list matches this filter.")
+        else:
+            self.catalog_note.setText(
+                "Select a list to see what it is. Licences belong to the upstream "
+                "project; WiFi Fortress records each file's origin and SHA-256."
+            )
+        size = self.catalog.cache_size()
+        self.catalog_status.setText(
+            f"{len(rows)} of {len(SOURCES)} shown · {size / 1_048_576:.1f} MB on disk"
+        )
+
+    def _selected_source(self):
+        rows = self.catalog_list.selectionModel().selectedRows()
+        if not rows:
+            return None
+        index = rows[0].row()
+        if 0 <= index < len(self._catalog_rows):
+            return self._catalog_rows[index]
+        return None
+
+    def _on_catalog_selected(self) -> None:
+        source = self._selected_source()
+        if source is None:
+            self.catalog_note.setText("Select a list to see what it is.")
+            return
+        kind = "single file" if source.is_file else "project page"
+        self.catalog_note.setText(
+            f"{source.name} ({kind}) — {source.note or 'No description.'} "
+            f"Licence: {source.licence}. Source: {source.homepage}"
+        )
+
+    def _open_catalog_page(self, row: int) -> None:
+        if 0 <= row < len(self._catalog_rows):
+            self._open_url(self._catalog_rows[row].homepage)
+
+    def _open_selected_page(self) -> None:
+        source = self._selected_source()
+        if source is not None:
+            self._open_url(source.homepage)
+
+    @staticmethod
+    def _open_url(url: str) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+
+        QDesktopServices.openUrl(QUrl(url))
+
+    def _download_selected(self) -> None:
+        self._download(import_after=False)
+
+    def _download_import_selected(self) -> None:
+        self._download(import_after=True)
+
+    def _download(self, import_after: bool) -> None:
+        source = self._selected_source()
+        if source is None:
+            self.banner.set_text("Select a word list first.", "warning")
+            return
+        if not source.is_file:
+            self.banner.set_text(
+                f"{source.name} is a project page, not a single file. Open it to choose a list.",
+                "warning",
+            )
+            self._open_url(source.homepage)
+            return
+        if self._worker.running:
+            return
+        self.banner.set_text(f"Downloading {source.name}…", "info")
+        self._download_import = import_after
+        self._worker.start(self._download_task, source)
+
+    def _download_task(self, source, token=None):
+        def progress(written: int, total: int) -> None:
+            if total:
+                self.banner.set_text(
+                    f"Downloading {source.name}… {written / 1048576:.1f} of "
+                    f"{total / 1048576:.1f} MB", "info",
+                )
+            else:
+                self.banner.set_text(
+                    f"Downloading {source.name}… {written / 1048576:.1f} MB", "info"
+                )
+
+        if self._download_import:
+            return self.catalog.download_and_import(source, progress=progress, token=token)
+        return self.catalog.download(source, progress=progress, token=token)
+
+    def _import_downloaded(self) -> None:
+        source = self._selected_source()
+        if source is None:
+            self.banner.set_text("Select a word list first.", "warning")
+            return
+        path = self.catalog.existing(source)
+        if path is None:
+            self.banner.set_text(
+                f"{source.name} has not been downloaded yet — use Download first.", "warning"
+            )
+            return
+        try:
+            info = self.context.dictionaries.import_file(path, name=source.name)
+        except (OSError, ValueError) as exc:
+            self.banner.set_text(f"Import failed: {exc}", "critical")
+            return
+        self.refresh()
+        self._refresh_catalog()
+        self.context.record_operation(
+            "dictionary", f"Imported {source.name}", "ok", f"{info.entry_count} entries"
+        )
+        self.banner.set_text(
+            f"Imported {source.name}: {info.entry_count:,} entries.", "success"
+        )
+
+    def _clear_downloads(self) -> None:
+        removed = self.catalog.clear_cache()
+        self._refresh_catalog()
+        self.banner.set_text(
+            f"Removed {removed} downloaded file(s) from the cache. Imported dictionaries stay.",
+            "info",
+        )
 
     def _open_folder(self) -> None:
         from wififortress.core.paths import dictionaries_dir

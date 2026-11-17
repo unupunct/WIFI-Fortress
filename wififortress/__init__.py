@@ -1,6 +1,6 @@
 """WiFi Fortress - Unified Parrot OS Wireless Security & Wi-Fi Recovery Suite."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 APP_VERSION = __version__
 APP_NAME = "WiFi Fortress"
 APP_ID = "wifi-fortress"

@@ -1,0 +1,18 @@
+WiFi Fortress - Wireless security, diagnostics and Wi-Fi recovery suite
+Copyright (C) 2026 WiFi Fortress Project
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The bundled word lists in wififortress/resources/dictionaries are released
+under CC0-1.0 and were authored for this project.
+
+Graphics and icons: drawn by the project itself with Qt.
+Qt / PySide6 is licensed under the LGPL-3.0; ReportLab under BSD; pyqtgraph
+under MIT. Their licences are included with this distribution.
