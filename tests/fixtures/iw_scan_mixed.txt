@@ -1,0 +1,72 @@
+BSS 00:11:22:33:44:55(on wlan0) -- associated
+	freq: 2412.0
+	beacon interval: 100 TUs
+	capability: ESS Privacy ShortSlotTime (0x0411)
+	signal: -42.00 dBm
+	last seen: 120 ms ago
+	Information elements from Probe Response frame:
+	SSID: HomeNetwork
+	Supported rates: 1.0* 2.0* 5.5* 11.0* 6.0 9.0 12.0 18.0 
+	DS Parameter set: channel 1
+	RSN:	 * Version: 1
+		 * Group cipher: CCMP
+		 * Pairwise ciphers: CCMP
+		 * Authentication suites: PSK SAE
+		 * Capabilities: 16-PTKSA-RC 1-GTKSA-RC (0x000c)
+BSS 66:77:88:99:aa:bb(on wlan0)
+	freq: 2437.0
+	beacon interval: 100 TUs
+	capability: ESS Privacy ShortSlotTime (0x0411)
+	signal: -61.00 dBm
+	SSID: OldRouter
+	DS Parameter set: channel 6
+	RSN:	 * Version: 1
+		 * Group cipher: TKIP
+		 * Pairwise ciphers: TKIP
+		 * Authentication suites: PSK
+		 * Capabilities: 0x000c
+	WPA:	 * Version: 1
+		 * Group cipher: TKIP
+		 * Pairwise ciphers: TKIP
+		 * Authentication suites: PSK
+BSS cc:dd:ee:ff:00:11(on wlan0)
+	freq: 5180.0
+	beacon interval: 100 TUs
+	capability: ESS Privacy (0x0011)
+	signal: -70.00 dBm
+	SSID: Office5G
+	DS Parameter set: channel 36
+	RSN:	 * Version: 1
+		 * Group cipher: CCMP
+		 * Pairwise ciphers: CCMP
+		 * Authentication suites: IEEE 802.1X
+		 * Capabilities: 0x000c
+BSS 12:34:56:78:9a:bc(on wlan0)
+	freq: 2462.0
+	beacon interval: 100 TUs
+	capability: ESS ShortSlotTime (0x0401)
+	signal: -80.00 dBm
+	SSID: FreeCafeWiFi
+	DS Parameter set: channel 11
+	Supported rates: 1.0* 2.0* 5.5* 11.0* 6.0 9.0 12.0 18.0 
+BSS aa:bb:cc:dd:ee:ff(on wlan0)
+	freq: 2437.0
+	beacon interval: 100 TUs
+	capability: ESS Privacy ShortSlotTime (0x0411)
+	signal: -85.00 dBm
+	SSID: 
+	DS Parameter set: channel 6
+	RSN:	 * Version: 1
+		 * Group cipher: CCMP
+		 * Pairwise ciphers: CCMP
+		 * Authentication suites: SAE
+		 * Capabilities: 0x000c
+BSS 11:22:33:44:55:66(on wlan0)
+	freq: 2437.0
+	beacon interval: 100 TUs
+	capability: ESS Privacy ShortSlotTime (0x0411)
+	signal: -55.00 dBm
+	SSID: LegacyWEP
+	DS Parameter set: channel 6
+	WPS:	 * Version: 1.0
+		 * Wi-Fi Protected Setup State: 2 (Configured)

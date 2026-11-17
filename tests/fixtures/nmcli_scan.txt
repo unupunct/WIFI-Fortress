@@ -1,0 +1,6 @@
+# nmcli -t -f BSSID,SSID,CHAN,FREQ,SIGNAL,SECURITY,MODE,RATE,WPA-FLAGS,RSN-FLAGS device wifi list
+00\:11\:22\:33\:44\:55:HomeNetwork:1:2412 MHz:82:WPA2 WPA3:Infra:130 MB/s:pair_ccmp:pair_ccmp
+66\:77\:88\:99\:AA\:BB:OldRouter:6:2437 MHz:64:WPA1 WPA2:Infra:54 MB/s:pair_tkip:pair_ccmp
+CC\:DD\:EE\:FF\:00\:11:Office5G:36:5180 MHz:48:WPA2 802.1X:Infra:540 MB/s::pair_ccmp
+12\:34\:56\:78\:9A\:BC:FreeCafeWiFi:11:2462 MHz:34::Infra:54 MB/s::
+AA\:BB\:CC\:DD\:EE\:FF::6:2437 MHz:22:WPA3:Infra:130 MB/s::pair_ccmp
